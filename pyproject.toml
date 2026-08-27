@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wind-index-mcp"
+version = "0.1.0"
+description = "Read-only MCP service for WIND stock index metadata stored in Oracle"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=2.0.0,<3",
+    "oracledb>=4.0.2,<5",
+    "pydantic-settings>=2.15.0,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0,<10",
+    "pytest-asyncio>=1.4,<2",
+]
+
+[project.scripts]
+wind-index-mcp-stdio = "index_mcp.run_stdio:main"
+wind-index-mcp-http = "index_mcp.run_http:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
+pythonpath = ["src"]
+testpaths = ["tests"]
+

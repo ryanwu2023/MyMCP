@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      text { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; fill: #172033; }
+      .title { font-size: 42px; font-weight: 700; }
+      .subtitle { font-size: 22px; fill: #657089; }
+      .group { font-size: 21px; font-weight: 700; fill: #526078; }
+      .box-title { font-size: 23px; font-weight: 700; }
+      .box-copy { font-size: 17px; fill: #5d687f; }
+      .tool { font-size: 17px; font-weight: 600; }
+      .safe-title { font-size: 23px; font-weight: 700; fill: #ffffff; }
+      .safe-copy { font-size: 20px; fill: #dbe8fa; }
+      .arrow { stroke: #8390a7; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .flow { stroke: #4e83dd; stroke-width: 4; fill: none; marker-end: url(#arrowBlue); }
+    </style>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#243656" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#8390a7"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#4e83dd"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#f7f9fc"/>
+  <text x="800" y="72" text-anchor="middle" class="title">从智能体到 Oracle：指数基础数据 MCP 服务架构</text>
+  <text x="800" y="112" text-anchor="middle" class="subtitle">同一套业务能力，同时支持本地 stdio 与带鉴权的 Streamable HTTP</text>
+
+  <text x="150" y="173" text-anchor="middle" class="group">智能体</text>
+  <text x="430" y="173" text-anchor="middle" class="group">接入与安全边界</text>
+  <text x="910" y="173" text-anchor="middle" class="group">MCP 服务内部</text>
+  <text x="1435" y="173" text-anchor="middle" class="group">内部数据</text>
+
+  <g filter="url(#shadow)">
+    <rect x="55" y="225" width="190" height="105" rx="20" fill="#e9f2ff" stroke="#9dc2f4" stroke-width="2"/>
+    <text x="150" y="270" text-anchor="middle" class="box-title">WorkBuddy</text>
+    <text x="150" y="300" text-anchor="middle" class="box-copy">企业智能体</text>
+
+    <rect x="55" y="390" width="190" height="105" rx="20" fill="#e9f2ff" stroke="#9dc2f4" stroke-width="2"/>
+    <text x="150" y="435" text-anchor="middle" class="box-title">Codex</text>
+    <text x="150" y="465" text-anchor="middle" class="box-copy">本地开发智能体</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="320" y="225" width="235" height="105" rx="20" fill="#fff4dc" stroke="#e9bd66" stroke-width="2"/>
+    <text x="437" y="264" text-anchor="middle" class="box-title">Streamable HTTP</text>
+    <text x="437" y="294" text-anchor="middle" class="box-copy">Bearer API Key · Host 校验</text>
+
+    <rect x="320" y="390" width="235" height="105" rx="20" fill="#fff4dc" stroke="#e9bd66" stroke-width="2"/>
+    <text x="437" y="430" text-anchor="middle" class="box-title">stdio</text>
+    <text x="437" y="460" text-anchor="middle" class="box-copy">本地进程直接通信</text>
+  </g>
+
+  <path d="M245 278 H320" class="flow"/>
+  <path d="M245 442 H320" class="flow"/>
+  <path d="M555 278 H630" class="flow"/>
+  <path d="M555 442 H630" class="flow"/>
+
+  <g filter="url(#shadow)">
+    <rect x="630" y="200" width="590" height="430" rx="26" fill="#edf8f1" stroke="#8ecaa4" stroke-width="3"/>
+    <rect x="660" y="230" width="530" height="74" rx="16" fill="#d9f0e2"/>
+    <text x="925" y="260" text-anchor="middle" class="box-title">MCP Server</text>
+    <text x="925" y="287" text-anchor="middle" class="box-copy">生命周期管理 · 工具注册 · 健康检查</text>
+
+    <rect x="660" y="330" width="530" height="82" rx="16" fill="#ffffff" stroke="#b8ddc6" stroke-width="2"/>
+    <text x="690" y="363" class="box-title">Tools</text>
+    <text x="690" y="392" class="tool">按代码精确查询　｜　按名称模糊搜索</text>
+
+    <rect x="660" y="435" width="530" height="72" rx="16" fill="#ffffff" stroke="#b8ddc6" stroke-width="2"/>
+    <text x="690" y="465" class="box-title">Service</text>
+    <text x="860" y="465" class="box-copy">参数校验 · 规范化 · 返回数量限制</text>
+
+    <rect x="660" y="530" width="530" height="72" rx="16" fill="#ffffff" stroke="#b8ddc6" stroke-width="2"/>
+    <text x="690" y="560" class="box-title">Repository</text>
+    <text x="865" y="560" class="box-copy">固定只读 SQL · 绑定参数 · LIKE 转义</text>
+  </g>
+
+  <path d="M925 304 V330" class="arrow"/>
+  <path d="M925 412 V435" class="arrow"/>
+  <path d="M925 507 V530" class="arrow"/>
+
+  <path d="M1220 566 H1300" class="flow"/>
+
+  <g filter="url(#shadow)">
+    <rect x="1300" y="300" width="250" height="265" rx="24" fill="#f1ebff" stroke="#bca4ea" stroke-width="3"/>
+    <text x="1425" y="350" text-anchor="middle" class="box-title">Oracle</text>
+    <text x="1425" y="382" text-anchor="middle" class="box-copy">异步连接池</text>
+    <rect x="1335" y="420" width="180" height="95" rx="14" fill="#ffffff" stroke="#cbb9ee" stroke-width="2"/>
+    <text x="1425" y="458" text-anchor="middle" class="tool">指数描述表</text>
+    <text x="1425" y="487" text-anchor="middle" class="box-copy">股票类指数基础信息</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="140" y="700" width="1320" height="115" rx="22" fill="#172d4d"/>
+    <text x="190" y="747" class="safe-title">安全边界</text>
+    <text x="190" y="783" class="safe-copy">只读工具</text>
+    <circle cx="335" cy="777" r="4" fill="#79a8eb"/>
+    <text x="360" y="783" class="safe-copy">不接收任意 SQL</text>
+    <circle cx="575" cy="777" r="4" fill="#79a8eb"/>
+    <text x="600" y="783" class="safe-copy">所有输入参数化</text>
+    <circle cx="815" cy="777" r="4" fill="#79a8eb"/>
+    <text x="840" y="783" class="safe-copy">限制返回数量</text>
+    <circle cx="1045" cy="777" r="4" fill="#79a8eb"/>
+    <text x="1070" y="783" class="safe-copy">HTTP 强制 API Key</text>
+  </g>
+</svg>

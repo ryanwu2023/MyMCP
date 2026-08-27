@@ -1,0 +1,173 @@
+# WIND 股票指数基础数据 MCP 服务
+
+这是一个只读 MCP 服务，把 Oracle 表 `WIND_IMP.AINDEXDESCRIPTION` 中的股票类指数基础信息提供给本机和局域网智能体。
+
+目前提供两个工具：
+
+- `get_index_by_code(code)`：按 `S_INFO_CODE` 精确查询，例如 `000300`；
+- `search_indices_by_name(name, limit=20)`：按指数名称片段搜索，最多返回 100 条。
+
+服务不接受 SQL，不提供数据库写操作。查询使用固定 SQL 和 Oracle 绑定参数。
+
+## 运行环境
+
+- Windows 10/11；
+- Python 3.11 或更高版本；
+- 已准备可访问的 Oracle 主机、端口和 Service Name；
+- 首版使用 `python-oracledb` Thin 模式，无需安装 Oracle Client。
+
+## 安装
+
+在 PowerShell 中运行：
+
+```powershell
+Set-Location 'D:\1.Project\19.CodexProject\9.MCP'
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e '.[dev]'
+```
+
+将 `.env.example` 复制为 `.env` 并填写真实配置。本机已创建可运行的 `.env`；该文件被 `.gitignore` 排除，不会进入版本库。
+
+## 本机 stdio 模式
+
+手工启动时，进程会等待 MCP 客户端从标准输入发送消息：
+
+```powershell
+.\.venv\Scripts\python.exe -m index_mcp.run_stdio
+```
+
+Codex 使用项目级或用户级 `config.toml`。以下配置让 Codex 直接拉起本机服务：
+
+```toml
+[mcp_servers.wind_index]
+command = 'D:\1.Project\19.CodexProject\9.MCP\.venv\Scripts\python.exe'
+args = ["-m", "index_mcp.run_stdio"]
+cwd = 'D:\1.Project\19.CodexProject\9.MCP'
+required = true
+default_tools_approval_mode = "auto"
+```
+
+保存配置后重启 Codex，在 `/mcp` 中检查 `wind_index`。Codex 官方文档说明其桌面端、CLI 和 IDE 扩展共享 MCP 配置，并支持 stdio 与 Streamable HTTP：[Codex MCP 文档](https://developers.openai.com/codex/mcp)。
+
+## 局域网 HTTP 模式
+
+启动服务：
+
+```powershell
+Set-Location 'D:\1.Project\19.CodexProject\9.MCP'
+.\.venv\Scripts\python.exe -m index_mcp.run_http
+```
+
+当前配置：
+
+- 本机地址：`http://127.0.0.1:8765/mcp`
+- 局域网地址：`http://172.18.3.114:8765/mcp`
+- 健康检查：`http://172.18.3.114:8765/health`
+- MCP 端点必须携带 `Authorization: Bearer <MCP_API_KEY>`；
+- `/health` 不要求 API Key，只返回 `{"status":"ok"}`。
+
+如 Windows 防火墙阻止局域网连接，可在管理员 PowerShell 中只为本地子网开放端口：
+
+```powershell
+New-NetFirewallRule -DisplayName 'WIND Index MCP 8765' `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 `
+  -RemoteAddress LocalSubnet
+```
+
+不要把 8765 端口直接映射到公网。跨不可信网络使用时，应在前置代理启用 HTTPS，并升级为 OAuth。
+
+### Codex 连接局域网服务
+
+先在运行 Codex 的电脑上设置一个环境变量，其值为服务端 `.env` 中的 `MCP_API_KEY`：
+
+```powershell
+$env:WIND_INDEX_MCP_API_KEY = '<从服务端安全复制 API Key>'
+```
+
+然后在 Codex `config.toml` 中配置：
+
+```toml
+[mcp_servers.wind_index_lan]
+url = "http://172.18.3.114:8765/mcp"
+bearer_token_env_var = "WIND_INDEX_MCP_API_KEY"
+required = true
+default_tools_approval_mode = "auto"
+```
+
+官方配置项 `bearer_token_env_var` 会从环境变量读取 Bearer Token，避免把密钥直接写入 `config.toml`。其他支持 Streamable HTTP 的 MCP 客户端使用同一 URL，并设置相同的 `Authorization` 请求头即可。
+
+## 验证
+
+运行自动化测试：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
+
+验证 stdio 端到端调用：
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\smoke_test.py stdio
+```
+
+HTTP 服务启动后，在另一个 PowerShell 窗口验证：
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\smoke_test.py http
+```
+
+## 配置项
+
+| 变量 | 说明 | 默认/示例 |
+|---|---|---|
+| `ORACLE_HOST` | Oracle 主机 | `your_oracle_host` |
+| `ORACLE_PORT` | Oracle 端口 | `1521` |
+| `ORACLE_SERVICE_NAME` | Oracle Service Name | `your_service_name` |
+| `ORACLE_USER` | 只读账号 | 必填 |
+| `ORACLE_PASSWORD` | 数据库密码 | 必填、秘密 |
+| `ORACLE_POOL_MIN` | 最小连接数 | `1` |
+| `ORACLE_POOL_MAX` | 最大连接数 | `5` |
+| `ORACLE_CONNECT_TIMEOUT_SECONDS` | TCP/取连接超时 | `10` |
+| `ORACLE_CALL_TIMEOUT_MS` | 单次 Oracle 调用超时 | `30000` |
+| `MCP_HTTP_HOST` | HTTP 监听地址 | `0.0.0.0` |
+| `MCP_HTTP_PORT` | HTTP 端口 | `8765` |
+| `MCP_HTTP_PATH` | MCP 路径 | `/mcp` |
+| `MCP_API_KEY` | HTTP Bearer API Key | 至少 32 字符 |
+| `MCP_ALLOWED_HOSTS` | Host 白名单，逗号分隔 | `localhost:*,127.0.0.1:*` |
+| `LOG_LEVEL` | 日志等级 | `INFO` |
+
+如果 DHCP 导致服务器局域网 IP 变化，需要同时更新 `.env` 中的 `MCP_ALLOWED_HOSTS` 和客户端 URL。
+
+## API Key 轮换
+
+生成新 Key：
+
+```powershell
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+把输出写入服务端 `.env` 的 `MCP_API_KEY`，重启 HTTP 服务，再更新各客户端的环境变量。不要把 Key 提交到 Git、聊天记录或日志。
+
+## 扩展其他表
+
+每张新表或每组紧密相关的查询建立独立领域模块：
+
+```text
+src/index_mcp/domains/<domain>/
+├─ models.py
+├─ repository.py
+├─ service.py
+└─ tools.py
+```
+
+Repository 只能保存固定、参数化的只读 SQL；Service 负责输入规范化和业务边界；Tools 负责 MCP 契约。在 `server.py` 注册新工具即可复用现有连接池、鉴权、日志和双传输入口。
+
+## 安全说明
+
+- `.env` 和 `.venv` 已被 Git 忽略；
+- stdio 日志只写 `stderr`，不会污染 MCP 协议流；
+- HTTP 使用 Bearer API Key 和 Host 白名单；
+- CORS 默认关闭；
+- API Key over HTTP 只适用于可信局域网，网络监听者仍可能截获明文流量；
+- 数据库账号应在 Oracle 侧保持最小只读权限。
