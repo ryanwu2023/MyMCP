@@ -1,13 +1,31 @@
-# WIND 股票指数基础数据 MCP 服务
+# WIND 市场数据 MCP 服务
 
-这是一个只读 MCP 服务，把 Oracle 表 `WIND_IMP.AINDEXDESCRIPTION` 中的股票类指数基础信息提供给本机和局域网智能体。
+这是一个只读 MCP 服务，把 Oracle 中的股票类指数基础信息和 A 股股东大会信息提供给本机及局域网智能体。
 
-目前提供两个工具：
+目前提供三个工具：
 
 - `get_index_by_code(code)`：按 `S_INFO_CODE` 精确查询，例如 `000300`；
-- `search_indices_by_name(name, limit=20)`：按指数名称片段搜索，最多返回 100 条。
+- `search_indices_by_name(name, limit=20)`：按指数名称片段搜索，最多返回 100 条；
+- `get_shareholder_meetings(wind_code, meeting_date=None, limit=10)`：按完整 Wind 股票代码查询股东大会、召开时间、相关议案及表决结果。
 
 服务不接受 SQL，不提供数据库写操作。查询使用固定 SQL 和 Oracle 绑定参数。
+
+## 股东大会查询
+
+当前仅支持完整 Wind 股票代码，例如 `000001.SZ`、`600000.SH` 或 `920000.BJ`。股票简称查询将在补充股票代码与名称表后增加。
+
+- 不传 `meeting_date` 时，按会议日期倒序返回最近的股东大会；
+- 传入 `meeting_date="20260820"` 时，只返回该日期召开的会议；
+- `limit` 限制会议场数，默认 10、最大 50，不是议案条数；
+- 每场会议的 `proposals` 包含议案序号、名称、表决方式、标准化结果和数据库原始结果；
+- `result` 为 `passed`、`rejected` 或 `unknown`，分别表示通过、未通过和数据库未提供明确结果。
+- 会议表只读取 `IS_NEW = 1` 或历史空值记录；`IS_NEW = 0` 表示已被更新版本替代，查询时会排除以免重复。
+
+数据来自：
+
+- `WIND_IMP.ASHAREHOLDERSMEETING`：大会日期、时间、类型、名称和会议内容；
+- `WIND_IMP.ASHAREINTERNETVOTING`：逐项议案、表决方式和是否通过；
+- 两表通过 `MEETEVENT_ID = S_EVENT_ID` 关联。
 
 ## 运行环境
 

@@ -1,0 +1,1 @@
+"""Shareholder meeting query domain."""

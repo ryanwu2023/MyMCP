@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wind-index-mcp"
 version = "0.1.0"
-description = "Read-only MCP service for WIND stock index metadata stored in Oracle"
+description = "Read-only MCP service for WIND index and A-share meeting data in Oracle"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -32,4 +32,3 @@ addopts = "-ra"
 asyncio_mode = "auto"
 pythonpath = ["src"]
 testpaths = ["tests"]
-
