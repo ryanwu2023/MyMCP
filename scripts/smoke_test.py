@@ -18,18 +18,21 @@ async def exercise_session(session: ClientSession) -> None:
     search = await session.call_tool(
         "search_indices_by_name", {"name": "\u6caa\u6df1300", "limit": 3}
     )
+    stock = await session.call_tool("resolve_a_share", {"query": "000001.SZ"})
     meetings = await session.call_tool(
         "get_shareholder_meetings", {"wind_code": "000001.SZ", "limit": 1}
     )
     exact_content = exact.structured_content or {}
     exact_data = exact_content.get("data") or {}
     search_content = search.structured_content or {}
+    stock_content = stock.structured_content or {}
     meetings_content = meetings.structured_content or {}
     tool_names = [tool.name for tool in tools.tools]
 
     if set(tool_names) != {
         "get_index_by_code",
         "search_indices_by_name",
+        "resolve_a_share",
         "get_shareholder_meetings",
     }:
         raise RuntimeError(f"Unexpected MCP tools: {tool_names}")
@@ -41,6 +44,8 @@ async def exercise_session(session: ClientSession) -> None:
         raise RuntimeError("Oracle CLOB was not materialized as text")
     if search.is_error or not search_content.get("items"):
         raise RuntimeError("Index name search failed")
+    if stock.is_error or stock_content.get("status") != "resolved":
+        raise RuntimeError("A-share identity resolution failed")
     if meetings.is_error or not isinstance(meetings_content.get("items"), list):
         raise RuntimeError("Shareholder meeting lookup failed")
 
@@ -57,6 +62,7 @@ async def exercise_session(session: ClientSession) -> None:
             "search_codes": [
                 item.get("S_INFO_CODE") for item in search_content.get("items", [])
             ],
+            "stock_wind_code": (stock_content.get("company") or {}).get("wind_code"),
             "shareholder_meeting_is_error": meetings.is_error,
             "shareholder_meeting_count": meetings_content.get("count"),
         }

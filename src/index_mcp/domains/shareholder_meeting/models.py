@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from index_mcp.domains.stock_identity.models import StockCompany
+
 
 class ShareholderProposal(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -34,6 +36,7 @@ class ShareholderMeeting(BaseModel):
 class ShareholderMeetingResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    company: StockCompany
     count: int
     truncated: bool
     items: list[ShareholderMeeting]

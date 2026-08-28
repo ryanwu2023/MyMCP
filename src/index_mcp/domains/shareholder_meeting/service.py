@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-import re
 from typing import Any, Protocol
 
 from index_mcp.domains.shareholder_meeting.models import (
@@ -9,15 +8,19 @@ from index_mcp.domains.shareholder_meeting.models import (
     ShareholderMeetingResult,
     ShareholderProposal,
 )
-
-
-WIND_CODE_PATTERN = re.compile(r"^\d{6}\.(?:SH|SZ|BJ)$")
+from index_mcp.domains.stock_identity.models import StockResolution
 
 
 class RepositoryProtocol(Protocol):
     async def get_meetings(
         self, wind_code: str, meeting_date: str | None, limit: int
     ) -> tuple[list[dict[str, Any]], bool]: ...
+
+
+class IdentityServiceProtocol(Protocol):
+    async def resolve_a_share(
+        self, query: str, limit: int = 10
+    ) -> StockResolution: ...
 
 
 def _proposal_result(raw_is_passed: Any) -> str:
@@ -29,16 +32,17 @@ def _proposal_result(raw_is_passed: Any) -> str:
 
 
 class ShareholderMeetingService:
-    def __init__(self, repository: RepositoryProtocol) -> None:
+    def __init__(
+        self,
+        repository: RepositoryProtocol,
+        identity_service: IdentityServiceProtocol,
+    ) -> None:
         self._repository = repository
+        self._identity_service = identity_service
 
     async def get_shareholder_meetings(
         self, wind_code: str, meeting_date: str | None = None, limit: int = 10
     ) -> ShareholderMeetingResult:
-        normalized_code = wind_code.strip().upper()
-        if not WIND_CODE_PATTERN.fullmatch(normalized_code):
-            raise ValueError("Wind 股票代码格式应为 000001.SZ、600000.SH 或 920000.BJ")
-
         normalized_date = meeting_date.strip() if meeting_date is not None else None
         if normalized_date:
             try:
@@ -51,8 +55,25 @@ class ShareholderMeetingService:
         if not 1 <= limit <= 50:
             raise ValueError("limit 必须在 1 到 50 之间")
 
+        resolution = await self._identity_service.resolve_a_share(wind_code)
+        if resolution.status == "not_found":
+            raise ValueError(f"未找到 A 股公司：{resolution.query}")
+        if resolution.status == "ambiguous":
+            candidates = "、".join(
+                f"{item.short_name}（{item.wind_code}，{item.full_name}）"
+                for item in resolution.candidates
+            )
+            suffix = "，还有更多候选" if resolution.candidates_truncated else ""
+            raise ValueError(
+                f"名称“{resolution.query}”匹配多个 A 股公司：{candidates}{suffix}；"
+                "请使用 Wind 代码或更完整名称"
+            )
+
+        if resolution.company is None:
+            raise RuntimeError("A 股标的解析结果缺少公司资料")
+
         records, truncated = await self._repository.get_meetings(
-            normalized_code, normalized_date, limit
+            resolution.company.wind_code, normalized_date, limit
         )
         items = []
         for record in records:
@@ -83,5 +104,8 @@ class ShareholderMeetingService:
             )
 
         return ShareholderMeetingResult(
-            count=len(items), truncated=truncated, items=items
+            company=resolution.company,
+            count=len(items),
+            truncated=truncated,
+            items=items,
         )

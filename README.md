@@ -1,18 +1,34 @@
 # WIND 市场数据 MCP 服务
 
-这是一个只读 MCP 服务，把 Oracle 中的股票类指数基础信息和 A 股股东大会信息提供给本机及局域网智能体。
+这是一个只读 MCP 服务，把 Oracle 中的股票类指数、A 股标的基础信息和股东大会信息提供给本机及局域网智能体。
 
-目前提供三个工具：
+目前提供四个工具：
 
 - `get_index_by_code(code)`：按 `S_INFO_CODE` 精确查询，例如 `000300`；
 - `search_indices_by_name(name, limit=20)`：按指数名称片段搜索，最多返回 100 条；
-- `get_shareholder_meetings(wind_code, meeting_date=None, limit=10)`：按完整 Wind 股票代码查询股东大会、召开时间、相关议案及表决结果。
+- `resolve_a_share(query, limit=10)`：按 Wind 代码、六位代码、证券简称、公司全称或名称片段识别 A 股公司；
+- `get_shareholder_meetings(wind_code, meeting_date=None, limit=10)`：按代码或公司名称查询股东大会、召开时间、相关议案及表决结果。
 
 服务不接受 SQL，不提供数据库写操作。查询使用固定 SQL 和 Oracle 绑定参数。
 
+## A 股标的识别
+
+`resolve_a_share` 是可供股东大会、行情、财务等领域复用的独立标的解析工具：
+
+- `query="002311.SZ"`：按完整 Wind 代码精确识别；
+- `query="002311"`：按六位股票代码精确识别；
+- `query="海大集团"`：先按证券简称或公司全称精确识别；
+- `query="海大"`：精确匹配不到时，对证券简称和公司全称做包含搜索；
+- 唯一匹配时返回 `status="resolved"` 和公司基本资料；
+- 多个匹配时返回 `status="ambiguous"` 和最多 `limit` 个候选，不会自动猜测；
+- 无匹配时返回 `status="not_found"`；
+- `limit` 默认 10、最大 50；输入中的 `%`、`_` 和 `\` 会按普通字符处理。
+
+公司身份来自 `WIND_IMP.ASHAREDESCRIPTION`，公司简介来自 `WIND_IMP.ASHAREINTRODUCTION`，两表通过 `S_INFO_WINDCODE` 关联。存在多条公司简介时使用最新记录；没有简介时仍可返回代码、简称和全称。
+
 ## 股东大会查询
 
-当前仅支持完整 Wind 股票代码，例如 `000001.SZ`、`600000.SH` 或 `920000.BJ`。股票简称查询将在补充股票代码与名称表后增加。
+`get_shareholder_meetings` 的 `wind_code` 参数兼容原有完整 Wind 代码，同时支持六位代码、证券简称、公司全称和名称片段。例如，用户可以直接说“查询海大集团最近的股东大会议题”。名称存在多个候选时，服务会提示候选代码，用户指定后再查询。
 
 - 不传 `meeting_date` 时，按会议日期倒序返回最近的股东大会；
 - 传入 `meeting_date="20260820"` 时，只返回该日期召开的会议；
@@ -23,6 +39,8 @@
 
 数据来自：
 
+- `WIND_IMP.ASHAREDESCRIPTION`：Wind 代码、证券简称和公司全称；
+- `WIND_IMP.ASHAREINTRODUCTION`：公司简介、地区、管理层、网站及主营业务等；
 - `WIND_IMP.ASHAREHOLDERSMEETING`：大会日期、时间、类型、名称和会议内容；
 - `WIND_IMP.ASHAREINTERNETVOTING`：逐项议案、表决方式和是否通过；
 - 两表通过 `MEETEVENT_ID = S_EVENT_ID` 关联。

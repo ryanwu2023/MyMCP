@@ -7,6 +7,7 @@ import pytest
 from index_mcp.core.config import Settings
 from index_mcp.domains.index_description.service import IndexDescriptionService
 from index_mcp.domains.shareholder_meeting.service import ShareholderMeetingService
+from index_mcp.domains.stock_identity.service import StockIdentityService
 from index_mcp.server import create_server
 
 
@@ -44,6 +45,52 @@ class FakeShareholderMeetingRepository:
         ], False
 
 
+class FakeStockIdentityRepository:
+    @staticmethod
+    def record() -> dict:
+        return {
+            "WIND_CODE": "002311.SZ",
+            "STOCK_CODE": "002311",
+            "SHORT_NAME": "海大集团",
+            "FULL_NAME": "广东海大集团股份有限公司",
+            "LIST_DATE": "20091127",
+            "DELIST_DATE": None,
+            "PROVINCE": "广东省",
+            "CITY": "广州市",
+            "CHAIRMAN": None,
+            "PRESIDENT": None,
+            "BOARD_SECRETARY": None,
+            "REGISTERED_CAPITAL": None,
+            "FOUNDED_DATE": None,
+            "COMPANY_INTRODUCTION": "公司简介",
+            "COMPANY_TYPE": None,
+            "WEBSITE": None,
+            "EMAIL": None,
+            "OFFICE_ADDRESS": None,
+            "COUNTRY": "中国",
+            "BUSINESS_SCOPE": None,
+            "TOTAL_EMPLOYEES": None,
+            "MAIN_BUSINESS": "饲料及相关业务",
+        }
+
+    async def find_by_wind_code(self, query: str, limit: int):
+        return ([self.record()] if query == "002311.SZ" else []), False
+
+    async def find_by_stock_code(self, query: str, limit: int):
+        return ([self.record()] if query == "002311" else []), False
+
+    async def find_by_exact_name(self, query: str, limit: int):
+        return (
+            [self.record()]
+            if query in {"海大集团", "广东海大集团股份有限公司"}
+            else [],
+            False,
+        )
+
+    async def search_by_fuzzy_name(self, query: str, limit: int):
+        return ([self.record()] if query == "海大" else []), False
+
+
 def settings() -> Settings:
     return Settings(
         _env_file=None,
@@ -56,11 +103,13 @@ def settings() -> Settings:
 
 @pytest.mark.asyncio
 async def test_mcp_lists_and_calls_read_only_tools() -> None:
+    stock_identity_service = StockIdentityService(FakeStockIdentityRepository())
     server = create_server(
         settings(),
         index_service=IndexDescriptionService(FakeRepository()),
+        stock_identity_service=stock_identity_service,
         shareholder_meeting_service=ShareholderMeetingService(
-            FakeShareholderMeetingRepository()
+            FakeShareholderMeetingRepository(), stock_identity_service
         ),
     )
 
@@ -68,14 +117,18 @@ async def test_mcp_lists_and_calls_read_only_tools() -> None:
         tools = await client.list_tools()
         names = {tool.name for tool in tools.tools}
         result = await client.call_tool("get_index_by_code", {"code": "000300"})
+        stock_result = await client.call_tool(
+            "resolve_a_share", {"query": "海大集团"}
+        )
         meeting_result = await client.call_tool(
             "get_shareholder_meetings",
-            {"wind_code": "000001.SZ", "meeting_date": "20260820"},
+            {"wind_code": "海大集团", "meeting_date": "20260820"},
         )
 
     assert names == {
         "get_index_by_code",
         "search_indices_by_name",
+        "resolve_a_share",
         "get_shareholder_meetings",
     }
     assert result.is_error is False
@@ -83,7 +136,11 @@ async def test_mcp_lists_and_calls_read_only_tools() -> None:
         "found": True,
         "data": {"S_INFO_CODE": "000300", "S_INFO_NAME": "沪深300"},
     }
+    assert stock_result.is_error is False
+    assert stock_result.structured_content["status"] == "resolved"
+    assert stock_result.structured_content["company"]["wind_code"] == "002311.SZ"
     assert meeting_result.is_error is False
+    assert meeting_result.structured_content["company"]["short_name"] == "海大集团"
     assert meeting_result.structured_content["count"] == 1
     assert meeting_result.structured_content["items"][0]["proposals"] == [
         {

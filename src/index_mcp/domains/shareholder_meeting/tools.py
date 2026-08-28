@@ -23,9 +23,11 @@ def register_shareholder_meeting_tools(
     @server.tool(
         name="get_shareholder_meetings",
         description=(
-            "按完整 Wind 股票代码查询股东大会及逐项议案表决结果。wind_code 示例 "
-            "000001.SZ；meeting_date 可选，格式 YYYYMMDD，不填时返回最近会议；"
-            "limit 默认 10，最大 50。议案 result 为 passed、rejected 或 unknown。"
+            "按 A 股 Wind 代码、六位代码、证券简称、公司全称或名称片段查询"
+            "股东大会及逐项议案表决结果。wind_code 示例 002311.SZ、002311、"
+            "海大集团或海大；名称匹配多个公司时会返回候选提示。meeting_date "
+            "可选，格式 YYYYMMDD，不填时返回最近会议；limit 默认 10，最大 50。"
+            "议案 result 为 passed、rejected 或 unknown。"
         ),
         annotations=READ_ONLY_ANNOTATIONS,
         structured_output=True,
